@@ -2,6 +2,13 @@
 
 A growing collection of end-to-end analytics projects that demonstrate data cleaning, exploratory analysis, modeling, and business-facing insights. This repository currently includes a Telco churn analysis notebook and will expand with additional notebooks over time.
 
+## About Me
+I’m an aspiring data analyst focused on developing strong, practical analytics skills that translate directly to business impact. I’m currently transitioning from operational roles while pursuing a college education and building a portfolio of real-world data projects.
+
+My work centers on data cleaning, exploratory analysis, SQL querying, and visual storytelling using Python and BI tools. I aim to answer clear questions, surface meaningful patterns, and communicate insights in a way that supports informed decision-making.
+
+This portfolio reflects my commitment to mastering the fundamentals and building the kind of analytical judgment required in an entry-level data analyst role.
+
 ## Repository structure
 
 ```
