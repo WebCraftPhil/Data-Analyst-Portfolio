@@ -15,6 +15,7 @@ This portfolio reflects my commitment to mastering the fundamentals and building
 .
 ├── README.md
 └── Telco_Customer_Churn_Project.ipynb
+└── play_store_category_insights.py
 ```
 
 As new projects are added, each notebook will live at the repo root with a clear, descriptive filename. Supporting assets (data extracts, images, and helper scripts) will be added in future project-specific folders when needed.
@@ -31,6 +32,22 @@ Highlights:
 - Explores churn drivers with visualizations and cohort analysis.
 - Builds a logistic regression model for churn prediction.
 - Estimates ARPU and LTV by contract type, then summarizes recommendations.
+
+## Additional analysis scripts
+
+### Google Play Store Category Insights
+**File:** `play_store_category_insights.py`
+
+What it does:
+- Loads the Google Play Store dataset into pandas
+- Builds a per-category summary (apps, installs, rating, reviews) sorted by installs (desc) then app count (asc)
+- Saves two bar charts: apps per category and total installs per category
+- Prints 5 concise insights (overcrowded, underserved, high-demand/low-quality)
+
+How to run:
+- Place `googleplaystore.csv` at repo root, or under `data/play_store/googleplaystore.csv`
+- Or configure Kaggle credentials so `kagglehub` can download `lava18/google-play-store-apps`
+- Run: `python3 play_store_category_insights.py`
 
 ## How to run notebooks
 
