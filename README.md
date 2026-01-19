@@ -13,13 +13,23 @@ This portfolio reflects my commitment to mastering the fundamentals and building
 
 ```
 .
+├── Google_Play_Store_Category_Insights.ipynb
 ├── README.md
 └── Telco_Customer_Churn_Project.ipynb
 ```
 
 As new projects are added, each notebook will live at the repo root with a clear, descriptive filename. Supporting assets (data extracts, images, and helper scripts) will be added in future project-specific folders when needed.
 
-## Current project
+## Current projects
+
+### Google Play Store Category Insights
+**File:** `Google_Play_Store_Category_Insights.ipynb`
+
+Highlights:
+- Loads the Google Play Store dataset with Pandas and KaggleHub.
+- Builds a category-level summary with installs, ratings, and reviews.
+- Visualizes app counts and total installs per category.
+- Surfaces overcrowded, underserved, and low-quality demand signals.
 
 ### Telco Customer Churn Analysis
 **File:** `Telco_Customer_Churn_Project.ipynb`
