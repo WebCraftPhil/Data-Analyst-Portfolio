@@ -102,6 +102,12 @@ def build_category_summary(df: pd.DataFrame) -> pd.DataFrame:
     data["_reviews"] = _to_int_series(data["Reviews"])
     data["_rating"] = _to_float_series(data["Rating"])
 
+    # Known data quality issues in common Play Store CSVs:
+    # - A mis-shifted row can produce a numeric "Category" like "1.9" and an out-of-range rating.
+    # - Ratings should be within [0, 5] when present.
+    data = data[~data["Category"].astype(str).str.fullmatch(r"\d+(\.\d+)?", na=False)]
+    data = data[data["_rating"].isna() | data["_rating"].between(0, 5)]
+
     app_col = "App" if "App" in data.columns else None
     count_col = (app_col, "size") if app_col else ("Category", "size")
 
@@ -170,66 +176,58 @@ def generate_insights(summary: pd.DataFrame) -> list[str]:
     - high-demand but low-quality (high installs, low rating)
     """
     s = summary.copy()
-    # Guard against NaNs in ratings; treat NaN as "unknown" and exclude from low-quality rule.
     s["avg_rating"] = pd.to_numeric(s["avg_rating"], errors="coerce")
 
+    # Overcrowded = lots of apps, relatively weak installs/app.
     apps_q3 = s["num_apps"].quantile(0.75)
+    overcrowded_candidates = s[s["num_apps"] >= apps_q3].sort_values(
+        ["installs_per_app", "num_apps"], ascending=[True, False]
+    )
+    oc = _pick_first(overcrowded_candidates["Category"].tolist(), 2)
+
+    # Underserved = few apps, strong installs/app.
     apps_q1 = s["num_apps"].quantile(0.25)
-    installs_per_app_median = s["installs_per_app"].median()
+    underserved_candidates = s[s["num_apps"] <= apps_q1].sort_values(
+        ["installs_per_app", "total_installs"], ascending=[False, False]
+    )
+    un = _pick_first(underserved_candidates["Category"].tolist(), 2)
+
+    # High-demand but low-quality = high installs, lowest rating within that high-demand set.
     installs_q3 = s["total_installs"].quantile(0.75)
-    rating_median = s["avg_rating"].dropna().median() if s["avg_rating"].notna().any() else 0.0
-
-    overcrowded = s[
-        (s["num_apps"] >= apps_q3) & (s["installs_per_app"] <= installs_per_app_median)
-    ].sort_values(["num_apps", "installs_per_app"], ascending=[False, True])
-
-    underserved = s[
-        (s["num_apps"] <= apps_q1) & (s["installs_per_app"] >= installs_per_app_median)
-    ].sort_values(["installs_per_app", "total_installs"], ascending=[False, False])
-
-    high_demand_low_quality = s[
-        (s["total_installs"] >= installs_q3)
-        & (s["avg_rating"].notna())
-        & (s["avg_rating"] <= max(3.8, rating_median - 0.2))
-    ].sort_values(["total_installs", "avg_rating"], ascending=[False, True])
-
-    oc = _pick_first(overcrowded["Category"].tolist(), 2)
-    un = _pick_first(underserved["Category"].tolist(), 2)
-    hd = _pick_first(high_demand_low_quality["Category"].tolist(), 1)
-
-    bullets: list[str] = []
-    if oc:
-        bullets.append(
-            f"Overcrowded: {', '.join(oc)} have many apps but comparatively low installs per app."
-        )
-    if un:
-        bullets.append(
-            f"Underserved: {', '.join(un)} have few apps yet strong installs per app (room for entrants)."
-        )
-    if hd:
-        bullets.append(
-            f"High-demand but low-quality: {', '.join(hd)} combines high installs with below-par average ratings."
-        )
-
-    # Fill remaining bullets with highest-signal categories by simple heuristics.
-    top_installs = s.sort_values("total_installs", ascending=False).head(1)["Category"].tolist()
-    top_apps = s.sort_values("num_apps", ascending=False).head(1)["Category"].tolist()
-    low_rating = (
-        s[s["avg_rating"].notna()]
-        .sort_values(["avg_rating", "total_installs"], ascending=[True, False])
+    high_demand = s[(s["total_installs"] >= installs_q3) & (s["avg_rating"].notna())]
+    hd = (
+        high_demand.sort_values(["avg_rating", "total_installs"], ascending=[True, False])
         .head(1)["Category"]
         .tolist()
     )
 
-    extras = [
-        f"Demand concentration: {', '.join(top_installs)} leads total installs, signaling where users already are.",
-        f"Competitive pressure: {', '.join(top_apps)} has the largest supply of apps, making differentiation harder.",
-        f"Quality risk: {', '.join(low_rating)} shows the lowest average ratings (improvement opportunity).",
-    ]
-    for b in extras:
-        if len(bullets) >= 5:
-            break
-        bullets.append(b)
+    bullets: list[str] = []
+    for cat in oc:
+        row = s.loc[s["Category"] == cat].iloc[0]
+        bullets.append(
+            f"Overcrowded: {cat} has {int(row['num_apps'])} apps with only ~{row['installs_per_app']:.1e} installs/app."
+        )
+    for cat in un:
+        row = s.loc[s["Category"] == cat].iloc[0]
+        bullets.append(
+            f"Underserved: {cat} has just {int(row['num_apps'])} apps but ~{row['installs_per_app']:.1e} installs/app."
+        )
+    if hd:
+        cat = hd[0]
+        row = s.loc[s["Category"] == cat].iloc[0]
+        bullets.append(
+            f"High-demand but low-quality: {cat} is top-quartile in installs yet averages only {row['avg_rating']:.2f} rating."
+        )
+
+    # Ensure exactly 5 bullets (pad with additional high-signal observations if needed).
+    if len(bullets) < 5:
+        top_installs = s.sort_values("total_installs", ascending=False).head(5)
+        for _, r in top_installs.iterrows():
+            if len(bullets) >= 5:
+                break
+            bullets.append(
+                f"High demand: {r['Category']} contributes {int(r['total_installs'])} total installs across {int(r['num_apps'])} apps."
+            )
 
     return bullets[:5]
 
